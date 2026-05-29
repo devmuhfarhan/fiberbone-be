@@ -1,0 +1,119 @@
+# Fiberbone Backend - AI Development Rules
+
+Aturan ini merupakan pedoman dasar (AI Rules) dalam melakukan pengembangan, refactoring, atau perbaikan pada proyek backend **Fiberbone**. Patuhi instruksi berikut di setiap iterasi pengembangan.
+
+## 1. Arsitektur & Struktur Folder (M-S-C-R Pattern)
+Proyek ini mengadopsi pola **Model - Service - Controller - Route**. Setiap fitur baru wajib mengikuti pemisahan tanggung jawab (Separation of Concerns) berikut:
+
+- **`src/models/`**: Bertanggung jawab **hanya** untuk eksekusi kueri langsung ke PostgreSQL (`pg.Pool`). Tidak menggunakan ORM. Semua query mentah (SQL) harus menggunakan *parameterized queries* (contoh: `$1, $2`) untuk menghindari SQL Injection.
+- **`src/services/`**: Tempat menulis **Business Logic**. Panggil `models` di sini. Jika terjadi error logika bisnis, lemparkan error (`throw new Error()`) agar dapat ditangkap oleh Controller. Jangan me-return HTTP Response dari Service.
+- **`src/controllers/`**: Menangani **Request/Response HTTP**. Controller wajib:
+  - Membaca parameter/body.
+  - Memanggil fungsi dari `services`.
+  - Mengembalikan output JSON menggunakan helper standar `formatSuccess` atau `formatError` dari `src/utils/responseFormatter.ts`.
+- **`src/routes/`**: Menghubungkan endpoint HTTP ke `controllers`. Lindungi endpoint menggunakan middleware `authenticateToken` dan `authorizePermission` dari `src/middlewares/`.
+
+## 2. Keamanan & Autentikasi (JWT + Cookies)
+- Proyek ini menggunakan **Stateless JWT** (JSON Web Token) yang dipisah menjadi dua: `accessToken` (15 menit) dan `refreshToken` (7 hari).
+- **Semua Token** diserahkan kepada klien dalam bentuk **HTTP-Only Cookies**.
+- Saat membuat endpoint yang membutuhkan login, pastikan membaca JWT melalui cookie `req.cookies.accessToken`.
+- Sandi (Password) pengguna wajib di-*hash* menggunakan **bcryptjs** (minimal 10 *salt rounds*) sebelum disimpan ke database.
+
+## 3. Multi-Outlet Architecture
+Sistem ini adalah **multi-outlet**. Setiap data operasional harus terikat ke `outlet_id`.
+
+- **Semua tabel data** (produk, transaksi, pelanggan, dll) **wajib memiliki kolom `outlet_id`** sebagai Foreign Key ke tabel `outlets`.
+- **`superadmin`**: Pemilik outlet. Dapat mengakses semua outlet yang dimilikinya. Outlet aktif dikirim via header `X-Active-Outlet-Id` dari frontend (disimpan di `localStorage`).
+- **`cashier`, `finance`, `operational`**: Ditetapkan ke **satu outlet** via tabel `outlet_users`. `outlet_id` mereka diambil otomatis dari DB saat `authenticateToken`.
+- `req.user` setelah `authenticateToken` selalu memiliki shape: `{ id, role, outlet_id }`.
+- Di setiap controller, **wajib cek** `req.user.outlet_id` sebelum query DB. Jika `null` dan role bukan superadmin, kembalikan 400.
+- Semua query model **wajib menyertakan `outlet_id`** sebagai filter agar data antar outlet tidak bocor.
+
+### Tabel Inti Multi-Outlet
+```
+users          → role: superadmin | cashier | finance | operational
+outlets        → owner_id FK → users (superadmin)
+outlet_users   → outlet_id + user_id (non-superadmin assigned ke outlet)
+```
+
+## 4. RBAC (Role-Based Access Control) — Permission Table
+Sistem RBAC menggunakan **permission matrix dinamis** di database, bukan hardcode. Izin di-cache di Redis (TTL 5 menit).
+
+### Middleware yang Digunakan
+```typescript
+// WAJIB: gunakan authorizePermission, BUKAN authorizeRole (sudah dihapus)
+router.post('/produk', authenticateToken, authorizePermission('produk', 'create'), ctrl.create);
+```
+
+### Daftar Modul RBAC (tabel `modules`)
+Setiap fitur baru yang memerlukan proteksi WAJIB terdaftar di tabel `modules` dan di-seed ke `role_permissions`.
+Modul yang sudah ada:
+
+| slug | Nama | Role yang punya akses |
+|------|------|-----------------------|
+| `users` | Manajemen Pengguna | superadmin |
+| `pos` | Point of Sale | superadmin, cashier |
+| `pengeluaran-pemasukan` | Pengeluaran & Pemasukan | superadmin, finance |
+| `pelanggan` | Pelanggan | superadmin |
+| `produk` | Produk | superadmin, operational |
+| `atribut-produk` | Atribut Produk | superadmin, operational |
+| `stock-opname` | Stock Opname | superadmin, operational |
+
+### Aksi yang Tersedia (enum `permission_action`)
+`read` | `create` | `edit` | `delete` | `export` | `approve` | `pay` | `settings`
+
+### Aturan Wajib RBAC
+1. **Setiap fitur/route baru** → tambahkan slug ke tabel `modules` via migration.
+2. **Seed default permissions** di migration terpisah untuk setiap modul baru.
+3. **Jangan hardcode role** di middleware. Selalu gunakan `authorizePermission(slug, action)`.
+4. **Invalidasi cache Redis** setelah update permission via `permissionService.invalidateRoleCache(role)`.
+
+## 5. Redis Caching
+- Redis digunakan untuk cache hasil permission check agar tidak query DB setiap request.
+- Cache key format: `perm:{role}:{moduleSlug}:{action}` → value `'1'` (allowed) atau `'0'` (denied).
+- TTL cache: **5 menit**.
+- Saat update permission → **wajib delete cache key** terkait.
+- Import Redis dari `src/config/redis.ts` (singleton ioredis).
+- Saat unit test, selalu **mock** `../config/redis` dengan `__esModule: true`.
+
+## 6. Unit Testing (Jest + Supertest)
+- Kerangka pengujian standar adalah **Jest** bersama **Supertest**.
+- Semua file pengujian harus disimpan di dalam folder `src/__tests__/` dengan akhiran `.test.ts`.
+- **Aturan Wajib Test**: Gunakan pendekatan **Mocking** (`jest.mock()`) terhadap:
+  - `services` dan `models` → isolasi dari PostgreSQL
+  - `../models/outletUserModel` → mock `findOutletByUser` agar `authenticateToken` tidak query DB
+  - `../models/rolePermissionModel` → mock `checkPermission` agar `authorizePermission` tidak query DB
+  - `../config/redis` → mock dengan `__esModule: true` dan method `get`, `set`, `del`
+  - `../utils/logger`
+- Jangan pernah menjalankan *drop table* atau *real query* pada saat Unit Test.
+
+## 7. Dokumentasi API (Swagger OpenAPI 3)
+- Dokumentasi dilakukan terpusat menggunakan antarmuka **Swagger**.
+- Tuliskan dokumentasi menggunakan **JSDoc annotations (`/** @swagger ... */`)** secara inklusif di dalam file `src/routes/` (tepat di atas definisi `router.get`, `router.post`, dsb).
+- Pastikan mencakup properti: `tags`, `summary`, `security` (jika memakai cookie), `requestBody` (bila POST/PUT), dan struktur `responses` standar.
+- Jangan membuat file `.json` atau `.yaml` terpisah, cukup integrasikan *OpenAPI Specification* via JSDoc.
+
+## 8. Konvensi Kode & Lingkungan (TypeScript)
+- Semua kode wajib menggunakan **TypeScript** (Strict mode diaktifkan).
+- Jangan gunakan `any` jika tipe data bisa didefinisikan (buat interface/type di Model jika berinteraksi dengan tabel database).
+- Gunakan `logger` dari `src/utils/logger.ts` (Winston) alih-alih `console.log()` untuk mencatat *error* atau alur proses di production.
+- *Dependencies* untuk environment disentralisasi di dalam satu file `.env`. Gunakan `dotenv` dan panggil nilai melalui `process.env.NAMA_VARIABEL`.
+- `req.params.id` harus selalu di-cast ke `string`: `req.params.id as string`.
+
+## 9. Konvensi Migration Database
+- Migration menggunakan **node-pg-migrate** dengan format file: `{timestamp}_{nama-deskriptif}.js`.
+- Urutan migration **harus benar** karena ada FK dependency antar tabel.
+- Urutan yang sudah ada:
+  1. `create-users`
+  2. `create-outlets`
+  3. `create-outlet-users`
+  4. `create-modules` + enum `permission_action`
+  5. `create-role-permissions`
+  6. `seed-modules`
+  7. `seed-role-permissions`
+  8. `create-product-categories`
+  9. `create-product-units`
+  10. `create-products`
+  11. `seed-missing-modules` (tambah modul `users`)
+- **Setiap tabel data baru** wajib punya kolom `outlet_id UUID NOT NULL REFERENCES outlets(id) ON DELETE CASCADE`.
+- Setiap modul baru wajib di-seed ke `modules` + `role_permissions` dalam migration tersendiri.
