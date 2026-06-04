@@ -12,6 +12,8 @@ import outletRoutes from './routes/outletRoutes';
 import permissionRoutes from './routes/permissionRoutes';
 import productAttributeRoutes from './routes/productAttributeRoutes';
 import productRoutes from './routes/productRoutes';
+import accountRoutes from './routes/accountRoutes';
+import journalRoutes from './routes/journalRoutes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
@@ -51,6 +53,10 @@ app.use('/api/product-attributes', productAttributeRoutes);
 
 // Register Product routes
 app.use('/api/products', productRoutes);
+
+// Register Finance & Accounting routes
+app.use('/api/accounts', accountRoutes);
+app.use('/api/finance', journalRoutes);
 
 // Register Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

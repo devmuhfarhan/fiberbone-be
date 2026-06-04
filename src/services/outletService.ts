@@ -1,6 +1,7 @@
 import * as outletModel from '../models/outletModel';
 import * as outletUserModel from '../models/outletUserModel';
 import * as userModel from '../models/userModel';
+import * as accountModel from '../models/accountModel';
 import logger from '../utils/logger';
 
 // Buat outlet baru — hanya superadmin
@@ -15,6 +16,10 @@ export const createOutlet = async (
     }
 
     const outlet = await outletModel.createOutlet({ ...data, owner_id: ownerId });
+    
+    // Seed default accounts for the newly created outlet
+    await accountModel.seedDefaultAccounts(outlet.id);
+    
     return outlet;
   } catch (error) {
     logger.error('Error in outletService.createOutlet', error);
