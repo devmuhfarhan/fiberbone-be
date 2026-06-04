@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as customerModel from '../models/customerModel';
+import * as customerService from '../services/customerService';
 import { formatSuccess, formatError } from '../utils/responseFormatter';
 import logger from '../utils/logger';
 
@@ -73,6 +74,31 @@ export const deleteCustomer = async (req: Request, res: Response) => {
     return res.json({ status: 'success', data: null, message: 'Customer deleted successfully' });
   } catch (error: any) {
     logger.error('customerController.deleteCustomer error:', error);
+    return res.status(400).json(formatError(error.message));
+  }
+};
+
+export const payReceivable = async (req: Request, res: Response) => {
+  try {
+    const outletId = (req as any).user?.outlet_id;
+    if (!outletId) return res.status(400).json(formatError('Outlet ID is required'));
+
+    const { payment_account_id, amount, notes } = req.body;
+    if (!payment_account_id || !amount) {
+      return res.status(400).json(formatError('payment_account_id and amount are required'));
+    }
+
+    const result = await customerService.payReceivable(
+      req.params.id as string,
+      outletId,
+      payment_account_id,
+      Number(amount),
+      notes
+    );
+
+    return res.json({ status: 'success', data: result, message: 'Receivable paid successfully' });
+  } catch (error: any) {
+    logger.error('customerController.payReceivable error:', error);
     return res.status(400).json(formatError(error.message));
   }
 };

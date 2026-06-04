@@ -131,4 +131,38 @@ router.put('/:id', authenticateToken, authorizePermission('pelanggan', 'edit'), 
  */
 router.delete('/:id', authenticateToken, authorizePermission('pelanggan', 'delete'), customerController.deleteCustomer);
 
+/**
+ * @swagger
+ * /api/customers/{id}/pay-receivable:
+ *   post:
+ *     summary: Bayar piutang pelanggan
+ *     tags: [Customers]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [payment_account_id, amount]
+ *             properties:
+ *               payment_account_id:
+ *                 type: string
+ *               amount:
+ *                 type: number
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Pembayaran berhasil
+ */
+router.post('/:id/pay-receivable', authenticateToken, authorizePermission('pelanggan', 'edit'), customerController.payReceivable);
+
 export default router;

@@ -20,6 +20,7 @@ import reportRoutes from './routes/reportRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
 import customerRoutes from './routes/customerRoutes';
 import voucherRoutes from './routes/voucherRoutes';
+import posRoutes from './routes/posRoutes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
@@ -66,6 +67,9 @@ app.use('/api/inventory', inventoryRoutes);
 // Register Customer routes
 app.use('/api/customers', customerRoutes);
 app.use('/api/vouchers', voucherRoutes);
+
+// Register POS routes
+app.use('/api/pos', posRoutes);
 
 // Register Finance & Accounting routes
 app.use('/api/accounts', accountRoutes);
