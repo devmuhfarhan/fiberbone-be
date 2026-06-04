@@ -28,6 +28,10 @@ export const processSale = async (outletId: string, input: PosCheckoutInput) => 
   try {
     await client.query('BEGIN');
 
+    if (!input.items || input.items.length === 0) {
+      throw new Error('No items provided for sale');
+    }
+
     // 1. Calculate subtotal
     let subtotal = 0;
     for (const item of input.items) {

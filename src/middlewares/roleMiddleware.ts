@@ -85,8 +85,8 @@ export const authorizePermission = (
   };
 };
 
-export // Middleware tambahan untuk memastikan hanya superadmin yang dapat melakukan modifikasi data user
-const requireSuperadmin = (
+// Middleware tambahan untuk memastikan hanya superadmin yang dapat melakukan modifikasi data user
+export const requireSuperadmin = (
   req: AuthRequest,
   res: Response,
   next: NextFunction,
