@@ -105,8 +105,10 @@ export const seedDefaultAccounts = async (outletId: string): Promise<void> => {
         ($1, '2000', 'Hutang Usaha', 'Liability', 'Credit'),
         ($1, '3000', 'Modal', 'Equity', 'Credit'),
         ($1, '4000', 'Pendapatan Penjualan', 'Revenue', 'Credit'),
+        ($1, '4100', 'Pendapatan Penyesuaian Persediaan', 'Revenue', 'Credit'),
         ($1, '5000', 'Harga Pokok Penjualan', 'Expense', 'Debit'),
-        ($1, '6000', 'Biaya Operasional', 'Expense', 'Debit')
+        ($1, '6000', 'Biaya Operasional', 'Expense', 'Debit'),
+        ($1, '6100', 'Beban Kerugian Persediaan', 'Expense', 'Debit')
      ON CONFLICT (outlet_id, code) DO NOTHING;`,
     [outletId]
   );

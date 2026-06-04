@@ -17,6 +17,7 @@ import journalRoutes from './routes/journalRoutes';
 import vendorRoutes from './routes/vendorRoutes';
 import transactionRoutes from './routes/transactionRoutes';
 import reportRoutes from './routes/reportRoutes';
+import inventoryRoutes from './routes/inventoryRoutes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
@@ -56,6 +57,9 @@ app.use('/api/product-attributes', productAttributeRoutes);
 
 // Register Product routes
 app.use('/api/products', productRoutes);
+
+// Register Inventory routes
+app.use('/api/inventory', inventoryRoutes);
 
 // Register Finance & Accounting routes
 app.use('/api/accounts', accountRoutes);
