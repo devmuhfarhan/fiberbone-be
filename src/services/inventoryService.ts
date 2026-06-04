@@ -1,5 +1,6 @@
 import pool from '../config/db';
 import * as inventoryModel from '../models/inventoryModel';
+import * as productModel from '../models/productModel';
 import * as journalService from './journalService';
 import { findByCodeAndOutletId } from '../models/accountModel';
 import logger from '../utils/logger';
@@ -12,11 +13,14 @@ export const addStock = async (
   unitCost: number,
   referenceType?: string,
   referenceId?: string,
-  notes?: string
+  notes?: string,
+  externalClient?: any
 ) => {
-  const client = await pool.connect();
+  const client = externalClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!externalClient) {
+      await client.query('BEGIN');
+    }
 
     // 1. Create a new inventory batch
     await inventoryModel.createBatch({
@@ -44,14 +48,20 @@ export const addStock = async (
     const currentStock = await inventoryModel.getProductStock(productId, outletId, client);
     await inventoryModel.updateProductStock(productId, outletId, Number(currentStock) + quantity, client);
 
-    await client.query('COMMIT');
+    if (!externalClient) {
+      await client.query('COMMIT');
+    }
     return true;
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (!externalClient) {
+      await client.query('ROLLBACK');
+    }
     logger.error('Error in inventoryService.addStock', error);
     throw error;
   } finally {
-    client.release();
+    if (!externalClient) {
+      client.release();
+    }
   }
 };
 
@@ -62,11 +72,14 @@ export const removeStock = async (
   quantityToRemove: number,
   referenceType?: string,
   referenceId?: string,
-  notes?: string
+  notes?: string,
+  externalClient?: any
 ): Promise<number> => { // returns the total cost (HPP) of the removed stock
-  const client = await pool.connect();
+  const client = externalClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!externalClient) {
+      await client.query('BEGIN');
+    }
 
     const currentStock = await inventoryModel.getProductStock(productId, outletId, client);
     if (Number(currentStock) < quantityToRemove) {
@@ -112,14 +125,20 @@ export const removeStock = async (
     // Update total stock in products table
     await inventoryModel.updateProductStock(productId, outletId, Number(currentStock) - quantityToRemove, client);
 
-    await client.query('COMMIT');
+    if (!externalClient) {
+      await client.query('COMMIT');
+    }
     return totalCost;
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (!externalClient) {
+      await client.query('ROLLBACK');
+    }
     logger.error('Error in inventoryService.removeStock', error);
     throw error;
   } finally {
-    client.release();
+    if (!externalClient) {
+      client.release();
+    }
   }
 };
 
@@ -205,3 +224,133 @@ export const stockOpname = async (
     throw error;
   }
 };
+
+export interface ExchangeItemsInput {
+  returned_product_id: string;
+  returned_quantity: number;
+  exchange_product_id: string;
+  exchange_quantity: number;
+  payment_account_id?: string; // The account to debit for the difference (e.g. Kas/Bank)
+  notes?: string;
+}
+
+export const exchangeItems = async (outletId: string, input: ExchangeItemsInput) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Get products
+    const returnedProduct = await productModel.findById(input.returned_product_id, outletId);
+    if (!returnedProduct) throw new Error('Returned product not found');
+
+    const exchangeProduct = await productModel.findById(input.exchange_product_id, outletId);
+    if (!exchangeProduct) throw new Error('Exchange product not found');
+
+    // 2. Validate price constraint: returned item must be cheaper than exchange item
+    if (Number(returnedProduct.price) >= Number(exchangeProduct.price)) {
+      throw new Error('Penukaran gagal: Harga barang yang dikembalikan harus lebih murah daripada barang yang ditukarkan');
+    }
+
+    const returnTotal = Number(returnedProduct.price) * input.returned_quantity;
+    const exchangeTotal = Number(exchangeProduct.price) * input.exchange_quantity;
+    const priceDifference = exchangeTotal - returnTotal;
+
+    // Additionally check total value just in case
+    if (priceDifference <= 0) {
+      throw new Error('Penukaran gagal: Nilai total barang yang dikembalikan harus lebih kecil dari nilai total barang yang dikeluarkan');
+    }
+
+    // 3. Get accounting accounts
+    const kasAccount = await findByCodeAndOutletId('1000', outletId); // Kas
+    const revenueAccount = await findByCodeAndOutletId('4000', outletId); // Pendapatan Penjualan
+    const inventoryAccount = await findByCodeAndOutletId('1200', outletId); // Persediaan
+    const hppAccount = await findByCodeAndOutletId('5000', outletId); // HPP
+
+    if (!inventoryAccount || !revenueAccount || !hppAccount) {
+      throw new Error('Default accounting accounts (1200, 4000, 5000) are missing');
+    }
+
+    const journalNumber = `EXC-${Date.now()}`;
+    const date = new Date().toISOString().split('T')[0];
+
+    // 4. Returned Product stock IN
+    const batches = await inventoryModel.getBatchesByProductId(outletId, input.returned_product_id, client);
+    const returnedUnitCost = batches.length > 0 ? Number(batches[batches.length - 1].unit_cost) : (returnedProduct.cost_price || 0);
+    const returnedTotalCost = returnedUnitCost * input.returned_quantity;
+
+    await addStock(
+      outletId,
+      input.returned_product_id,
+      input.returned_quantity,
+      returnedUnitCost,
+      'EXCHANGE_RETURN',
+      journalNumber,
+      input.notes || `Penukaran barang masuk: ${returnedProduct.name}`,
+      client
+    );
+
+    // 5. Exchange Product stock OUT (FIFO)
+    const exchangeTotalCost = await removeStock(
+      outletId,
+      input.exchange_product_id,
+      input.exchange_quantity,
+      'EXCHANGE_OUT',
+      journalNumber,
+      input.notes || `Penukaran barang keluar: ${exchangeProduct.name}`,
+      client
+    );
+
+    // 6. Create Accounting Journal
+    const journalItems = [
+      // Revenue adjustment
+      { account_id: revenueAccount.id, debit: returnTotal, credit: 0, description: `Retur Penukaran: ${returnedProduct.name}` },
+      { account_id: revenueAccount.id, debit: 0, credit: exchangeTotal, description: `Penukaran Keluar: ${exchangeProduct.name}` },
+      
+      // Stock & HPP reversal for returned item
+      { account_id: inventoryAccount.id, debit: returnedTotalCost, credit: 0, description: `Kembali ke Persediaan: ${returnedProduct.name}` },
+      { account_id: hppAccount.id, debit: 0, credit: returnedTotalCost, description: `Reversal HPP Retur: ${returnedProduct.name}` },
+
+      // Stock & HPP record for exchange item
+      { account_id: hppAccount.id, debit: exchangeTotalCost, credit: 0, description: `HPP Penukaran: ${exchangeProduct.name}` },
+      { account_id: inventoryAccount.id, debit: 0, credit: exchangeTotalCost, description: `Persediaan Keluar: ${exchangeProduct.name}` }
+    ];
+
+    // Debit payment account for the difference
+    let debitAccountId = input.payment_account_id;
+    if (!debitAccountId && kasAccount) {
+      debitAccountId = kasAccount.id;
+    }
+    if (debitAccountId) {
+      journalItems.push({
+        account_id: debitAccountId,
+        debit: priceDifference,
+        credit: 0,
+        description: `Penerimaan Selisih Penukaran`
+      });
+    }
+
+    await journalService.createJournal({
+      outlet_id: outletId,
+      journal_number: journalNumber,
+      date,
+      description: input.notes || `Transaksi Penukaran Barang: ${returnedProduct.name} ke ${exchangeProduct.name}`,
+      items: journalItems
+    });
+
+    await client.query('COMMIT');
+    return {
+      success: true,
+      journal_number: journalNumber,
+      return_total: returnTotal,
+      exchange_total: exchangeTotal,
+      difference: priceDifference
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Error in inventoryService.exchangeItems', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+

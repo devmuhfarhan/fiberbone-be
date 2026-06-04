@@ -50,3 +50,37 @@ export const stockOpname = async (req: Request, res: Response) => {
     return res.status(400).json(formatError(error.message));
   }
 };
+
+export const exchangeItems = async (req: Request, res: Response) => {
+  try {
+    const outletId = (req as any).user?.outlet_id;
+    if (!outletId) return res.status(400).json(formatError('Outlet ID is required'));
+
+    const {
+      returned_product_id,
+      returned_quantity,
+      exchange_product_id,
+      exchange_quantity,
+      payment_account_id,
+      notes
+    } = req.body;
+
+    if (!returned_product_id || !returned_quantity || !exchange_product_id || !exchange_quantity) {
+      return res.status(400).json(formatError('returned_product_id, returned_quantity, exchange_product_id, and exchange_quantity are required'));
+    }
+
+    const result = await inventoryService.exchangeItems(outletId, {
+      returned_product_id,
+      returned_quantity: Number(returned_quantity),
+      exchange_product_id,
+      exchange_quantity: Number(exchange_quantity),
+      payment_account_id,
+      notes
+    });
+
+    return res.json(formatSuccess(result));
+  } catch (error: any) {
+    logger.error('inventoryController.exchangeItems error:', error);
+    return res.status(400).json(formatError(error.message));
+  }
+};

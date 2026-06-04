@@ -27,8 +27,8 @@ export interface InventoryTransaction {
   created_at: Date;
 }
 
-export const getBatchesByProductId = async (outletId: string, productId: string): Promise<InventoryBatch[]> => {
-  const result = await pool.query(
+export const getBatchesByProductId = async (outletId: string, productId: string, client: any = pool): Promise<InventoryBatch[]> => {
+  const result = await client.query(
     'SELECT * FROM inventory_batches WHERE outlet_id = $1 AND product_id = $2 ORDER BY batch_date ASC, created_at ASC',
     [outletId, productId]
   );

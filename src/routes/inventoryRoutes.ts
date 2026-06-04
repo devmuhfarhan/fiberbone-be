@@ -80,4 +80,39 @@ router.get('/products/:product_id/transactions', authenticateToken, authorizePer
  */
 router.post('/opname', authenticateToken, authorizePermission('stok', 'create'), inventoryController.stockOpname);
 
+/**
+ * @swagger
+ * /api/inventory/exchange:
+ *   post:
+ *     summary: Melakukan penukaran barang yang sudah dibeli customer
+ *     tags: [Inventory]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [returned_product_id, returned_quantity, exchange_product_id, exchange_quantity]
+ *             properties:
+ *               returned_product_id:
+ *                 type: string
+ *               returned_quantity:
+ *                 type: number
+ *               exchange_product_id:
+ *                 type: string
+ *               exchange_quantity:
+ *                 type: number
+ *               payment_account_id:
+ *                 type: string
+ *                 description: ID akun pembayaran untuk menerima selisih uang (opsional, default Kas)
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Penukaran barang berhasil dan jurnal akuntansi telah dicatat
+ */
+router.post('/exchange', authenticateToken, authorizePermission('stok', 'create'), inventoryController.exchangeItems);
+
 export default router;
