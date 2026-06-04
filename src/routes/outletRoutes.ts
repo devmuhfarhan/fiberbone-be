@@ -36,6 +36,10 @@ const router = Router();
  *                 type: string
  *               logo_url:
  *                 type: string
+ *               description:
+ *                 type: string
+ *               receipt_footer:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Outlet berhasil dibuat
@@ -112,6 +116,10 @@ router.get('/:id', authenticateToken, outletController.getOutletById);
  *               phone:
  *                 type: string
  *               logo_url:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               receipt_footer:
  *                 type: string
  *     responses:
  *       200:

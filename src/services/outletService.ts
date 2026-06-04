@@ -7,7 +7,14 @@ import logger from '../utils/logger';
 // Buat outlet baru — hanya superadmin
 export const createOutlet = async (
   ownerId: string,
-  data: { name: string; address?: string; phone?: string; logo_url?: string }
+  data: {
+    name: string;
+    address?: string;
+    phone?: string;
+    logo_url?: string;
+    description?: string;
+    receipt_footer?: string;
+  }
 ) => {
   try {
     const owner = await userModel.findById(ownerId);
@@ -63,7 +70,14 @@ export const getOutletById = async (outletId: string, userId: string, role: stri
 export const updateOutlet = async (
   outletId: string,
   ownerId: string,
-  data: { name?: string; address?: string; phone?: string; logo_url?: string }
+  data: {
+    name?: string;
+    address?: string;
+    phone?: string;
+    logo_url?: string;
+    description?: string;
+    receipt_footer?: string;
+  }
 ) => {
   try {
     const outlet = await outletModel.findById(outletId);

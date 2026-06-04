@@ -7,13 +7,20 @@ import logger from '../utils/logger';
 // POST /api/outlets — buat outlet baru (superadmin)
 export const createOutlet = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, address, phone, logo_url } = req.body;
+    const { name, address, phone, logo_url, description, receipt_footer } = req.body;
     if (!name) {
       res.status(400).json(formatError('Outlet name is required'));
       return;
     }
 
-    const outlet = await outletService.createOutlet(req.user!.id, { name, address, phone, logo_url });
+    const outlet = await outletService.createOutlet(req.user!.id, {
+      name,
+      address,
+      phone,
+      logo_url,
+      description,
+      receipt_footer
+    });
     res.status(201).json(formatSuccess(outlet));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create outlet';
@@ -52,8 +59,15 @@ export const getOutletById = async (req: AuthRequest, res: Response): Promise<vo
 export const updateOutlet = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const outletId = req.params.id as string;
-    const { name, address, phone, logo_url } = req.body;
-    const outlet = await outletService.updateOutlet(outletId, req.user!.id, { name, address, phone, logo_url });
+    const { name, address, phone, logo_url, description, receipt_footer } = req.body;
+    const outlet = await outletService.updateOutlet(outletId, req.user!.id, {
+      name,
+      address,
+      phone,
+      logo_url,
+      description,
+      receipt_footer
+    });
     res.status(200).json(formatSuccess(outlet));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update outlet';

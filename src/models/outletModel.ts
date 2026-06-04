@@ -6,6 +6,8 @@ export interface Outlet {
   address?: string;
   phone?: string;
   logo_url?: string;
+  description?: string;
+  receipt_footer?: string;
   owner_id: string;
   is_active: boolean;
   created_at?: Date;
@@ -17,13 +19,15 @@ export interface CreateOutletData {
   address?: string;
   phone?: string;
   logo_url?: string;
+  description?: string;
+  receipt_footer?: string;
   owner_id: string;
 }
 
 // Ambil semua outlet (untuk superadmin)
 export const findAll = async (): Promise<Outlet[]> => {
   const result = await pool.query(
-    'SELECT id, name, address, phone, logo_url, owner_id, is_active, created_at, updated_at FROM outlets ORDER BY created_at DESC'
+    'SELECT id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at FROM outlets ORDER BY created_at DESC'
   );
   return result.rows;
 };
@@ -31,7 +35,7 @@ export const findAll = async (): Promise<Outlet[]> => {
 // Ambil outlet berdasarkan ID
 export const findById = async (id: string): Promise<Outlet | null> => {
   const result = await pool.query(
-    'SELECT id, name, address, phone, logo_url, owner_id, is_active, created_at, updated_at FROM outlets WHERE id = $1',
+    'SELECT id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at FROM outlets WHERE id = $1',
     [id]
   );
   return result.rows[0] || null;
@@ -40,7 +44,7 @@ export const findById = async (id: string): Promise<Outlet | null> => {
 // Ambil outlet milik superadmin tertentu (owner)
 export const findByOwnerId = async (ownerId: string): Promise<Outlet[]> => {
   const result = await pool.query(
-    'SELECT id, name, address, phone, logo_url, owner_id, is_active, created_at, updated_at FROM outlets WHERE owner_id = $1 ORDER BY created_at DESC',
+    'SELECT id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at FROM outlets WHERE owner_id = $1 ORDER BY created_at DESC',
     [ownerId]
   );
   return result.rows;
@@ -49,7 +53,7 @@ export const findByOwnerId = async (ownerId: string): Promise<Outlet[]> => {
 // Ambil outlet yang bisa diakses oleh user non-superadmin (via outlet_users)
 export const findByUserId = async (userId: string): Promise<Outlet | null> => {
   const result = await pool.query(
-    `SELECT o.id, o.name, o.address, o.phone, o.logo_url, o.owner_id, o.is_active, o.created_at, o.updated_at
+    `SELECT o.id, o.name, o.address, o.phone, o.logo_url, o.description, o.receipt_footer, o.owner_id, o.is_active, o.created_at, o.updated_at
      FROM outlets o
      INNER JOIN outlet_users ou ON ou.outlet_id = o.id
      WHERE ou.user_id = $1 AND o.is_active = true
@@ -62,10 +66,18 @@ export const findByUserId = async (userId: string): Promise<Outlet | null> => {
 // Buat outlet baru
 export const createOutlet = async (data: CreateOutletData): Promise<Outlet> => {
   const result = await pool.query(
-    `INSERT INTO outlets (name, address, phone, logo_url, owner_id)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, name, address, phone, logo_url, owner_id, is_active, created_at, updated_at`,
-    [data.name, data.address || null, data.phone || null, data.logo_url || null, data.owner_id]
+    `INSERT INTO outlets (name, address, phone, logo_url, description, receipt_footer, owner_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at`,
+    [
+      data.name,
+      data.address || null,
+      data.phone || null,
+      data.logo_url || null,
+      data.description || null,
+      data.receipt_footer || null,
+      data.owner_id
+    ]
   );
   return result.rows[0];
 };
@@ -80,6 +92,8 @@ export const updateOutlet = async (id: string, data: Partial<CreateOutletData>):
   if (data.address !== undefined) { fields.push(`address = $${idx++}`); values.push(data.address); }
   if (data.phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(data.phone); }
   if (data.logo_url !== undefined) { fields.push(`logo_url = $${idx++}`); values.push(data.logo_url); }
+  if (data.description !== undefined) { fields.push(`description = $${idx++}`); values.push(data.description); }
+  if (data.receipt_footer !== undefined) { fields.push(`receipt_footer = $${idx++}`); values.push(data.receipt_footer); }
 
   if (fields.length === 0) return findById(id);
 
@@ -88,7 +102,7 @@ export const updateOutlet = async (id: string, data: Partial<CreateOutletData>):
 
   const result = await pool.query(
     `UPDATE outlets SET ${fields.join(', ')} WHERE id = $${idx}
-     RETURNING id, name, address, phone, logo_url, owner_id, is_active, created_at, updated_at`,
+     RETURNING id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at`,
     values
   );
   return result.rows[0] || null;
