@@ -63,10 +63,10 @@ export const findByIdAndOutletId = async (id: string, outletId: string): Promise
   return journal;
 };
 
-export const createJournal = async (data: CreateJournalData): Promise<Journal> => {
-  const client = await pool.connect();
+export const createJournal = async (data: CreateJournalData, externalClient?: any): Promise<Journal> => {
+  const client = externalClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!externalClient) await client.query('BEGIN');
 
     // 1. Insert Journal
     const journalResult = await client.query(
@@ -89,12 +89,12 @@ export const createJournal = async (data: CreateJournalData): Promise<Journal> =
       items.push(itemResult.rows[0]);
     }
 
-    await client.query('COMMIT');
+    if (!externalClient) await client.query('COMMIT');
     return { ...journal, items };
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (!externalClient) await client.query('ROLLBACK');
     throw error;
   } finally {
-    client.release();
+    if (!externalClient) client.release();
   }
 };

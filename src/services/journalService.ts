@@ -22,7 +22,7 @@ export const getJournalById = async (id: string, outletId: string) => {
   }
 };
 
-export const createJournal = async (data: journalModel.CreateJournalData) => {
+export const createJournal = async (data: journalModel.CreateJournalData, externalClient?: any) => {
   try {
     if (!data.items || data.items.length < 2) {
       throw new Error('Journal must have at least 2 items');
@@ -62,7 +62,7 @@ export const createJournal = async (data: journalModel.CreateJournalData) => {
       throw new Error(`Journal is not balanced. Total Debit: ${totalDebit}, Total Credit: ${totalCredit}`);
     }
 
-    return await journalModel.createJournal(data);
+    return await journalModel.createJournal(data, externalClient);
   } catch (error) {
     logger.error('Error in journalService.createJournal', error);
     throw error;

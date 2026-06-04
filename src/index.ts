@@ -21,6 +21,7 @@ import inventoryRoutes from './routes/inventoryRoutes';
 import customerRoutes from './routes/customerRoutes';
 import voucherRoutes from './routes/voucherRoutes';
 import posRoutes from './routes/posRoutes';
+import purchaseRoutes from './routes/purchaseRoutes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
@@ -79,6 +80,9 @@ app.use('/api/finance/reports', reportRoutes);
 
 // Register Vendor routes
 app.use('/api/vendors', vendorRoutes);
+
+// Register Purchase routes
+app.use('/api/purchases', purchaseRoutes);
 
 // Register Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
