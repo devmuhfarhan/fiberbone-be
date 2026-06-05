@@ -12,11 +12,23 @@ export interface User {
 }
 
 // Template fungsi query ke database (contoh: Get all users dengan pagination)
-export const findAll = async (limit: number, offset: number): Promise<{ users: User[], total: number }> => {
-  const countResult = await pool.query('SELECT COUNT(*) FROM users');
+export const findAll = async (limit: number, offset: number, search: string = ''): Promise<{ users: User[], total: number }> => {
+  let countQuery = 'SELECT COUNT(*) FROM users';
+  let dataQuery = 'SELECT id, fullname, email, is_active, role, created_at, updated_at FROM users';
+  const queryParams: any[] = [];
+
+  if (search) {
+    countQuery += ' WHERE fullname ILIKE $1 OR email ILIKE $1';
+    dataQuery += ' WHERE fullname ILIKE $1 OR email ILIKE $1';
+    queryParams.push(`%${search}%`);
+  }
+
+  const countResult = await pool.query(countQuery, queryParams);
   const total = parseInt(countResult.rows[0].count, 10);
 
-  const result = await pool.query('SELECT id, fullname, email, is_active, role, created_at, updated_at FROM users LIMIT $1 OFFSET $2', [limit, offset]);
+  dataQuery += ` ORDER BY created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+  const result = await pool.query(dataQuery, [...queryParams, limit, offset]);
+  
   return { users: result.rows, total };
 };
 

@@ -15,11 +15,17 @@ export interface CreateProductUnitData {
   abbreviation?: string;
 }
 
-export const findAllByOutlet = async (outletId: string): Promise<ProductUnit[]> => {
-  const result = await pool.query(
-    'SELECT id, outlet_id, name, abbreviation, created_at, updated_at FROM product_units WHERE outlet_id = $1 ORDER BY name ASC',
-    [outletId]
-  );
+export const findAllByOutlet = async (outletId: string, search: string = ''): Promise<ProductUnit[]> => {
+  let query = 'SELECT id, outlet_id, name, abbreviation, created_at, updated_at FROM product_units WHERE outlet_id = $1';
+  const queryParams: any[] = [outletId];
+
+  if (search) {
+    query += ' AND (name ILIKE $2 OR abbreviation ILIKE $2)';
+    queryParams.push(`%${search}%`);
+  }
+
+  query += ' ORDER BY name ASC';
+  const result = await pool.query(query, queryParams);
   return result.rows;
 };
 

@@ -3,10 +3,10 @@ import bcrypt from 'bcryptjs';
 import logger from '../utils/logger';
 
 // Template business logic (contoh: Get all users dengan pagination)
-export const getAllUsers = async (page: number, limit: number) => {
+export const getAllUsers = async (page: number, limit: number, search: string = '') => {
   try {
     const offset = (page - 1) * limit;
-    const result = await userModel.findAll(limit, offset);
+    const result = await userModel.findAll(limit, offset, search);
     return result;
   } catch (error) {
     logger.error('Error in userService.getAllUsers', error);

@@ -1,9 +1,9 @@
 import * as vendorModel from '../models/vendorModel';
 import logger from '../utils/logger';
 
-export const getVendors = async (outletId: string) => {
+export const getVendors = async (outletId: string, search: string = '') => {
   try {
-    return await vendorModel.findAllByOutletId(outletId);
+    return await vendorModel.findAllByOutletId(outletId, search);
   } catch (error) {
     logger.error('Error in vendorService.getVendors', error);
     throw error;

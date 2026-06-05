@@ -32,7 +32,8 @@ export const createOutlet = async (req: AuthRequest, res: Response): Promise<voi
 // GET /api/outlets — daftar outlet sesuai role
 export const getOutlets = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const outlets = await outletService.getOutlets(req.user!.id, req.user!.role);
+    const search = req.query.search as string || '';
+    const outlets = await outletService.getOutlets(req.user!.id, req.user!.role, search);
     res.status(200).json(formatSuccess(outlets));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to retrieve outlets';

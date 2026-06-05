@@ -4,9 +4,9 @@ import logger from '../utils/logger';
 
 // ─── KATEGORI ────────────────────────────────────────────────────────────────
 
-export const getCategories = async (outletId: string) => {
+export const getCategories = async (outletId: string, search: string = '') => {
   try {
-    return await categoryModel.findAllByOutlet(outletId);
+    return await categoryModel.findAllByOutlet(outletId, search);
   } catch (error) {
     logger.error('Error in productAttributeService.getCategories', error);
     throw error;
@@ -48,9 +48,9 @@ export const deleteCategory = async (id: string, outletId: string) => {
 
 // ─── SATUAN ──────────────────────────────────────────────────────────────────
 
-export const getUnits = async (outletId: string) => {
+export const getUnits = async (outletId: string, search: string = '') => {
   try {
-    return await unitModel.findAllByOutlet(outletId);
+    return await unitModel.findAllByOutlet(outletId, search);
   } catch (error) {
     logger.error('Error in productAttributeService.getUnits', error);
     throw error;

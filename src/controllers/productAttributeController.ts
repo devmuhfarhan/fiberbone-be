@@ -12,7 +12,8 @@ export const getCategories = async (req: AuthRequest, res: Response): Promise<vo
     const outletId = req.user!.outlet_id;
     if (!outletId) { res.status(400).json(formatError('No active outlet selected')); return; }
 
-    const data = await productAttributeService.getCategories(outletId);
+    const search = req.query.search as string || '';
+    const data = await productAttributeService.getCategories(outletId, search);
     res.status(200).json(formatSuccess(data));
   } catch (error: unknown) {
     logger.error('productAttributeController.getCategories', error);
@@ -75,7 +76,8 @@ export const getUnits = async (req: AuthRequest, res: Response): Promise<void> =
     const outletId = req.user!.outlet_id;
     if (!outletId) { res.status(400).json(formatError('No active outlet selected')); return; }
 
-    const data = await productAttributeService.getUnits(outletId);
+    const search = req.query.search as string || '';
+    const data = await productAttributeService.getUnits(outletId, search);
     res.status(200).json(formatSuccess(data));
   } catch (error: unknown) {
     logger.error('productAttributeController.getUnits', error);

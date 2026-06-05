@@ -9,7 +9,8 @@ export const getCustomers = async (req: Request, res: Response) => {
     const outletId = (req as any).user?.outlet_id;
     if (!outletId) return res.status(400).json(formatError('Outlet ID is required'));
 
-    const customers = await customerModel.findAllByOutletId(outletId);
+    const search = req.query.search as string || '';
+    const customers = await customerModel.findAllByOutletId(outletId, search);
     return res.json(formatSuccess(customers));
   } catch (error: any) {
     logger.error('customerController.getCustomers error:', error);

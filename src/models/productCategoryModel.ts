@@ -13,11 +13,17 @@ export interface CreateProductCategoryData {
   name: string;
 }
 
-export const findAllByOutlet = async (outletId: string): Promise<ProductCategory[]> => {
-  const result = await pool.query(
-    'SELECT id, outlet_id, name, created_at, updated_at FROM product_categories WHERE outlet_id = $1 ORDER BY name ASC',
-    [outletId]
-  );
+export const findAllByOutlet = async (outletId: string, search: string = ''): Promise<ProductCategory[]> => {
+  let query = 'SELECT id, outlet_id, name, created_at, updated_at FROM product_categories WHERE outlet_id = $1';
+  const queryParams: any[] = [outletId];
+
+  if (search) {
+    query += ' AND name ILIKE $2';
+    queryParams.push(`%${search}%`);
+  }
+
+  query += ' ORDER BY name ASC';
+  const result = await pool.query(query, queryParams);
   return result.rows;
 };
 

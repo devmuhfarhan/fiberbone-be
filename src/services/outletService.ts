@@ -35,13 +35,17 @@ export const createOutlet = async (
 };
 
 // Ambil daftar outlet sesuai role
-export const getOutlets = async (userId: string, role: string) => {
+export const getOutlets = async (userId: string, role: string, search: string = '') => {
   try {
     if (role === 'superadmin') {
-      return await outletModel.findByOwnerId(userId);
+      return await outletModel.findByOwnerId(userId, search);
     }
     const outlet = await outletModel.findByUserId(userId);
-    return outlet ? [outlet] : [];
+    if (!outlet) return [];
+    if (search && !outlet.name.toLowerCase().includes(search.toLowerCase()) && !(outlet.address && outlet.address.toLowerCase().includes(search.toLowerCase()))) {
+      return [];
+    }
+    return [outlet];
   } catch (error) {
     logger.error('Error in outletService.getOutlets', error);
     throw error;

@@ -25,10 +25,17 @@ export interface CreateOutletData {
 }
 
 // Ambil semua outlet (untuk superadmin)
-export const findAll = async (): Promise<Outlet[]> => {
-  const result = await pool.query(
-    'SELECT id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at FROM outlets ORDER BY created_at DESC'
-  );
+export const findAll = async (search: string = ''): Promise<Outlet[]> => {
+  let query = 'SELECT id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at FROM outlets';
+  const queryParams: any[] = [];
+
+  if (search) {
+    query += ' WHERE name ILIKE $1 OR address ILIKE $1';
+    queryParams.push(`%${search}%`);
+  }
+
+  query += ' ORDER BY created_at DESC';
+  const result = await pool.query(query, queryParams);
   return result.rows;
 };
 
@@ -42,11 +49,17 @@ export const findById = async (id: string): Promise<Outlet | null> => {
 };
 
 // Ambil outlet milik superadmin tertentu (owner)
-export const findByOwnerId = async (ownerId: string): Promise<Outlet[]> => {
-  const result = await pool.query(
-    'SELECT id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at FROM outlets WHERE owner_id = $1 ORDER BY created_at DESC',
-    [ownerId]
-  );
+export const findByOwnerId = async (ownerId: string, search: string = ''): Promise<Outlet[]> => {
+  let query = 'SELECT id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at FROM outlets WHERE owner_id = $1';
+  const queryParams: any[] = [ownerId];
+
+  if (search) {
+    query += ' AND (name ILIKE $2 OR address ILIKE $2)';
+    queryParams.push(`%${search}%`);
+  }
+
+  query += ' ORDER BY created_at DESC';
+  const result = await pool.query(query, queryParams);
   return result.rows;
 };
 

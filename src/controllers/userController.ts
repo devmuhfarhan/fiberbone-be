@@ -8,8 +8,9 @@ export const getUsers = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 10;
+    const search = req.query.search as string || '';
 
-    const { users, total } = await userService.getAllUsers(page, limit);
+    const { users, total } = await userService.getAllUsers(page, limit, search);
     const totalPage = Math.ceil(total / limit);
 
     res.json(formatSuccess(users, { page, limit, total, totalPage }));

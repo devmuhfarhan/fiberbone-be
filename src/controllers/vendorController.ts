@@ -9,7 +9,8 @@ export const getVendors = async (req: Request, res: Response) => {
     if (!outletId) {
       return res.status(400).json(formatError('Outlet ID is required'));
     }
-    const vendors = await vendorService.getVendors(outletId);
+    const search = req.query.search as string || '';
+    const vendors = await vendorService.getVendors(outletId, search);
     return res.json(formatSuccess(vendors));
   } catch (error: any) {
     logger.error('vendorController.getVendors error:', error);
