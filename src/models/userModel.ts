@@ -7,6 +7,7 @@ export interface User {
   password?: string;
   is_active: boolean;
   role: 'superadmin' | 'cashier' | 'finance' | 'operational';
+  permissions?: Record<string, string[]>;
   created_at?: Date;
   updated_at?: Date;
 }

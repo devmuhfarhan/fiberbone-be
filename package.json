@@ -11,7 +11,8 @@
     "migrate:up": "npm run migrate up",
     "migrate:down": "npm run migrate down",
     "seed:admin": "ts-node src/database/seeder/adminSeeder.ts",
-    "seed:outlet": "ts-node src/database/seeder/outletSeeder.ts"
+    "seed:outlet": "ts-node src/database/seeder/outletSeeder.ts",
+    "seed:user": "ts-node src/database/seeder/userSeeder.ts"
   },
   "keywords": [],
   "author": "",

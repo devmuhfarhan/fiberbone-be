@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import * as userModel from '../models/userModel';
+import * as rolePermissionModel from '../models/rolePermissionModel';
 import logger from '../utils/logger';
 
 export const register = async (userData: any) => {
@@ -56,6 +57,17 @@ export const login = async (email: string, password: string): Promise<{ accessTo
 
     // Hapus password sebelum dikembalikan
     delete user.password;
+
+    // Fetch and map permissions
+    const permissionsRows = await rolePermissionModel.findByRole(user.role);
+    const permissions: Record<string, string[]> = {};
+    for (const row of permissionsRows) {
+      if (row.allowed) {
+        if (!permissions[row.module_slug]) permissions[row.module_slug] = [];
+        permissions[row.module_slug].push(row.action);
+      }
+    }
+    user.permissions = permissions;
 
     return { accessToken, refreshToken, user };
   } catch (error) {
