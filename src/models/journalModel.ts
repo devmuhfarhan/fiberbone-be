@@ -42,7 +42,27 @@ export const findAllByOutletId = async (outletId: string): Promise<Journal[]> =>
     'SELECT * FROM journals WHERE outlet_id = $1 ORDER BY date DESC, created_at DESC',
     [outletId]
   );
-  return result.rows;
+  
+  const journals = result.rows;
+  
+  if (journals.length === 0) return [];
+
+  const journalIds = journals.map(j => j.id);
+  const itemsResult = await pool.query(
+    'SELECT * FROM journal_items WHERE journal_id = ANY($1)',
+    [journalIds]
+  );
+
+  const itemsByJournalId = itemsResult.rows.reduce((acc, item) => {
+    if (!acc[item.journal_id]) acc[item.journal_id] = [];
+    acc[item.journal_id].push(item);
+    return acc;
+  }, {} as Record<string, JournalItem[]>);
+
+  return journals.map(j => ({
+    ...j,
+    items: itemsByJournalId[j.id] || []
+  }));
 };
 
 export const findByIdAndOutletId = async (id: string, outletId: string): Promise<Journal | null> => {

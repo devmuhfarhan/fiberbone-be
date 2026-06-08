@@ -48,6 +48,32 @@ export const getProfitAndLoss = async (outletId: string, startDate: string, endD
 
 export const getGeneralLedger = async (outletId: string, accountId: string, startDate: string, endDate: string) => {
   try {
+    const accountResult = await pool.query(
+      'SELECT id, code, name, type, balance_type FROM accounts WHERE id = $1 AND outlet_id = $2',
+      [accountId, outletId]
+    );
+    if (accountResult.rows.length === 0) throw new Error('Account not found');
+    const account = accountResult.rows[0];
+
+    // Calculate Opening Balance
+    // Sum of all entries BEFORE startDate
+    const openingResult = await pool.query(
+      `SELECT 
+         COALESCE(SUM(ji.debit), 0) as total_debit,
+         COALESCE(SUM(ji.credit), 0) as total_credit
+       FROM journals j
+       JOIN journal_items ji ON j.id = ji.journal_id
+       WHERE j.outlet_id = $1 AND ji.account_id = $2 AND j.date < $3`,
+      [outletId, accountId, startDate]
+    );
+    const openingData = openingResult.rows[0];
+    let openingBalance = 0;
+    if (account.balance_type === 'Debit') {
+      openingBalance = Number(openingData.total_debit) - Number(openingData.total_credit);
+    } else {
+      openingBalance = Number(openingData.total_credit) - Number(openingData.total_debit);
+    }
+
     const result = await pool.query(
       `SELECT 
          j.date, j.journal_number, j.description as journal_description, j.reference,
@@ -60,7 +86,26 @@ export const getGeneralLedger = async (outletId: string, accountId: string, star
        ORDER BY j.date ASC, j.created_at ASC`,
       [outletId, accountId, startDate, endDate]
     );
-    return result.rows;
+    
+    let currentBalance = openingBalance;
+    const transactions = result.rows.map(row => {
+      const debit = Number(row.debit);
+      const credit = Number(row.credit);
+      if (account.balance_type === 'Debit') {
+        currentBalance += (debit - credit);
+      } else {
+        currentBalance += (credit - debit);
+      }
+      // Note: we map j.description as description to match frontend expectations
+      return { ...row, description: row.journal_description || row.item_description, balance: currentBalance };
+    });
+
+    return {
+      account,
+      openingBalance,
+      transactions,
+      closingBalance: currentBalance
+    };
   } catch (error) {
     logger.error('Error in reportService.getGeneralLedger', error);
     throw error;

@@ -49,7 +49,7 @@ export const getGeneralLedger = async (req: Request, res: Response) => {
     const report = await reportService.getGeneralLedger(outletId, accountId, startDate, endDate);
 
     if (exportFormat === 'csv') {
-      const csvString = reportService.generateCSV(report);
+      const csvString = reportService.generateCSV(report.transactions);
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename="general_ledger_${accountId}_${startDate}_${endDate}.csv"`);
       return res.status(200).send(csvString);

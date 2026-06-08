@@ -78,7 +78,46 @@ export const getBalanceSheet = async (req: Request, res: Response) => {
     if (!outletId) {
       return res.status(400).json(formatError('Outlet ID is required'));
     }
-    const balanceSheet = await accountService.getBalanceSheet(outletId);
+    const accounts = await accountService.getBalanceSheet(outletId);
+
+    const assets = [];
+    const liabilities = [];
+    const equity = [];
+    
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+    let totalEquity = 0;
+
+    for (const acc of accounts) {
+      const balance = Number(acc.balance || 0);
+      const mapped = {
+        account_id: acc.id,
+        account_code: acc.code,
+        account_name: acc.name,
+        balance: balance
+      };
+
+      if (acc.type === 'Asset') {
+        assets.push(mapped);
+        totalAssets += balance;
+      } else if (acc.type === 'Liability') {
+        liabilities.push(mapped);
+        totalLiabilities += balance;
+      } else if (acc.type === 'Equity') {
+        equity.push(mapped);
+        totalEquity += balance;
+      }
+    }
+
+    const balanceSheet = {
+      assets,
+      liabilities,
+      equity,
+      totalAssets,
+      totalLiabilities,
+      totalEquity
+    };
+
     return res.json(formatSuccess(balanceSheet));
   } catch (error: any) {
     logger.error('accountController.getBalanceSheet error:', error);
