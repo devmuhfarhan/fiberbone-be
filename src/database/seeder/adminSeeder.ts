@@ -1,40 +1,25 @@
 import pool from '../../config/db';
 import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
+import logger from '../../utils/logger';
 
-dotenv.config();
-
-const seedAdminUser = async () => {
+const seedAdmin = async () => {
   try {
-    console.log('Seeding administrator user...');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('superadmin123', salt);
+    
+    const id = uuidv4();
+    await pool.query(
+      'INSERT INTO users (id, fullname, email, password, is_active, role) VALUES ($1, $2, $3, $4, $5, $6)',
+      [id, 'Super Admin', 'admin@fiberbone.com', hashedPassword, true, 'superadmin']
+    );
 
-    // Check if superadmin already exists
-    const existingAdmin = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@fiberbone.com']);
-    
-    if (existingAdmin.rows.length > 0) {
-      console.log('Administrator user already exists.');
-      process.exit(0);
-    }
-
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash('admin123', saltRounds);
-
-    const insertQuery = `
-      INSERT INTO users (fullname, email, password, is_active, role)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, email;
-    `;
-    
-    const values = ['Administrator', 'admin@fiberbone.com', hashedPassword, true, 'superadmin'];
-    
-    const result = await pool.query(insertQuery, values);
-    
-    console.log(`Successfully created administrator user: ${result.rows[0].email}`);
+    logger.info('Admin seeded successfully! Email: admin@fiberbone.com | Password: superadmin123');
     process.exit(0);
   } catch (error) {
-    console.error('Error seeding administrator user:', error);
+    logger.error('Error seeding admin', error);
     process.exit(1);
   }
 };
 
-seedAdminUser();
+seedAdmin();

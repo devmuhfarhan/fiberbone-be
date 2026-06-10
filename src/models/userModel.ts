@@ -1,4 +1,5 @@
 import pool from '../config/db';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface User {
   id: string;
@@ -12,9 +13,8 @@ export interface User {
   updated_at?: Date;
 }
 
-// Template fungsi query ke database (contoh: Get all users dengan pagination)
 export const findAll = async (limit: number, offset: number, search: string = ''): Promise<{ users: User[], total: number }> => {
-  let countQuery = 'SELECT COUNT(*) FROM users';
+  let countQuery = 'SELECT COUNT(*) as count FROM users';
   let dataQuery = 'SELECT id, fullname, email, is_active, role, created_at, updated_at FROM users';
   const queryParams: any[] = [];
 
@@ -33,25 +33,23 @@ export const findAll = async (limit: number, offset: number, search: string = ''
   return { users: result.rows, total };
 };
 
-// Template fungsi query get by ID
 export const findById = async (id: string): Promise<User | null> => {
   const result = await pool.query('SELECT id, fullname, email, is_active, role, created_at, updated_at FROM users WHERE id = $1', [id]);
   return result.rows[0] || null;
 };
 
-// Template fungsi query get by email
 export const findByEmail = async (email: string): Promise<User | null> => {
   const result = await pool.query('SELECT id, fullname, email, password, is_active, role, created_at, updated_at FROM users WHERE email = $1', [email]);
   return result.rows[0] || null;
 };
 
-// Template fungsi insert user baru
 export const createUser = async (user: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> => {
-  const result = await pool.query(
-    'INSERT INTO users (fullname, email, password, is_active, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, fullname, email, is_active, role, created_at, updated_at',
-    [user.fullname, user.email, user.password, user.is_active, user.role]
+  const id = uuidv4();
+  await pool.query(
+    'INSERT INTO users (id, fullname, email, password, is_active, role) VALUES ($1, $2, $3, $4, $5, $6)',
+    [id, user.fullname, user.email, user.password, user.is_active, user.role]
   );
-  return result.rows[0];
+  return (await findById(id)) as User;
 };
 
 export const updateUser = async (id: string, data: { fullname?: string; email?: string; role?: string }): Promise<User | null> => {
@@ -68,19 +66,19 @@ export const updateUser = async (id: string, data: { fullname?: string; email?: 
   fields.push(`updated_at = current_timestamp`);
   values.push(id);
 
-  const result = await pool.query(
-    `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, fullname, email, is_active, role, created_at, updated_at`,
+  await pool.query(
+    `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}`,
     values
   );
-  return result.rows[0] || null;
+  return findById(id);
 };
 
 export const updateStatus = async (id: string, isActive: boolean): Promise<User | null> => {
-  const result = await pool.query(
-    `UPDATE users SET is_active = $1, updated_at = current_timestamp WHERE id = $2 RETURNING id, fullname, email, is_active, role, created_at, updated_at`,
+  await pool.query(
+    `UPDATE users SET is_active = $1, updated_at = current_timestamp WHERE id = $2`,
     [isActive, id]
   );
-  return result.rows[0] || null;
+  return findById(id);
 };
 
 export const updatePassword = async (id: string, hashedPassword: string): Promise<boolean> => {

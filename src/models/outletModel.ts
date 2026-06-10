@@ -1,4 +1,5 @@
 import pool from '../config/db';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Outlet {
   id: string;
@@ -78,11 +79,13 @@ export const findByUserId = async (userId: string): Promise<Outlet | null> => {
 
 // Buat outlet baru
 export const createOutlet = async (data: CreateOutletData): Promise<Outlet> => {
-  const result = await pool.query(
-    `INSERT INTO outlets (name, address, phone, logo_url, description, receipt_footer, owner_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at`,
+  const id = uuidv4();
+  await pool.query(
+    `INSERT INTO outlets (id, name, address, phone, logo_url, description, receipt_footer, owner_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     `,
     [
+      id,
       data.name,
       data.address || null,
       data.phone || null,
@@ -92,7 +95,7 @@ export const createOutlet = async (data: CreateOutletData): Promise<Outlet> => {
       data.owner_id
     ]
   );
-  return result.rows[0];
+  return (await findById(id)) as Outlet;
 };
 
 // Update outlet
@@ -113,10 +116,10 @@ export const updateOutlet = async (id: string, data: Partial<CreateOutletData>):
   fields.push(`updated_at = current_timestamp`);
   values.push(id);
 
-  const result = await pool.query(
+  await pool.query(
     `UPDATE outlets SET ${fields.join(', ')} WHERE id = $${idx}
-     RETURNING id, name, address, phone, logo_url, description, receipt_footer, owner_id, is_active, created_at, updated_at`,
+     `,
     values
   );
-  return result.rows[0] || null;
+  return findById(id);
 };

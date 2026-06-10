@@ -7,6 +7,7 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 jest.mock('../models/outletModel');
 jest.mock('../models/outletUserModel');
 jest.mock('../models/userModel');
+jest.mock('../models/accountModel');
 
 describe('Outlet Service', () => {
   beforeEach(() => {
@@ -39,7 +40,7 @@ describe('Outlet Service', () => {
 
       const result = await outletService.getOutlets('1', 'superadmin');
 
-      expect(outletModel.findByOwnerId).toHaveBeenCalledWith('1');
+      expect(outletModel.findByOwnerId).toHaveBeenCalledWith('1', '');
       expect(result).toEqual(mockOutlets);
     });
 

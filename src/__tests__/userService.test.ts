@@ -20,7 +20,7 @@ describe('User Service', () => {
 
       const result = await userService.getAllUsers(1, 10);
 
-      expect(userModel.findAll).toHaveBeenCalledWith(10, 0); // limit: 10, offset: 0
+      expect(userModel.findAll).toHaveBeenCalledWith(10, 0, '');
       expect(result).toEqual(mockUsers);
     });
   });

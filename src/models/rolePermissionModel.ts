@@ -1,4 +1,5 @@
 import pool from '../config/db';
+import { v4 as uuidv4 } from 'uuid';
 
 export type PermissionAction = 'read' | 'create' | 'edit' | 'delete' | 'export' | 'approve' | 'pay' | 'settings';
 export type UserRole = 'superadmin' | 'cashier' | 'finance' | 'operational';
@@ -50,10 +51,10 @@ export const upsertPermission = async (
 ): Promise<void> => {
   await pool.query(
     `INSERT INTO role_permissions (role, module_id, action, allowed)
-     SELECT $1::user_role, m.id, $3::permission_action, $4
-     FROM modules m WHERE m.slug = $2
-     ON CONFLICT (role, module_id, action) DO UPDATE SET allowed = EXCLUDED.allowed`,
-    [role, moduleSlug, action, allowed]
+     SELECT $1, m.id, $2, $3
+     FROM modules m WHERE m.slug = $4
+     ON DUPLICATE KEY UPDATE allowed = VALUES(allowed)`,
+    [role, action, allowed, moduleSlug]
   );
 };
 

@@ -1,4 +1,5 @@
 import pool from '../config/db';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Purchase {
   id: string;
@@ -60,7 +61,7 @@ export const create = async (
     `INSERT INTO purchases 
        (outlet_id, vendor_id, po_number, date, payment_method, payment_account_id, total_amount, notes, created_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     RETURNING *`,
+     `,
     [
       purchase.outlet_id,
       purchase.vendor_id,
@@ -99,7 +100,7 @@ export const findById = async (id: string, outletId: string, client: any = pool)
      WHERE p.id = $1 AND p.outlet_id = $2`,
     [id, outletId]
   );
-  return result.rows[0] || null;
+  return (result.rows && result.rows.length > 0) ? result.rows[0] : null;
 };
 
 export const findItemsByPurchaseId = async (purchaseId: string, client: any = pool): Promise<PurchaseItem[]> => {

@@ -1,55 +1,27 @@
 import pool from '../../config/db';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { v4 as uuidv4 } from 'uuid';
+import logger from '../../utils/logger';
 
 const seedOutlet = async () => {
   try {
-    console.log('Seeding master outlet...');
+    // Cari superadmin pertama
+    const adminRes = await pool.query("SELECT id FROM users WHERE role = 'superadmin' LIMIT 1");
+    if (adminRes.rows.length === 0) {
+      throw new Error('No superadmin found. Please run seed:admin first.');
+    }
+    const adminId = adminRes.rows[0].id;
 
-    // Ambil superadmin sebagai owner
-    const adminResult = await pool.query(
-      "SELECT id FROM users WHERE email = 'admin@fiberbone.com' AND role = 'superadmin' LIMIT 1"
+    const id = uuidv4();
+    await pool.query(
+      `INSERT INTO outlets (id, name, address, phone, owner_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, 'Fiberbone Main Outlet', 'Jl. Jenderal Sudirman No. 1', '081234567890', adminId]
     );
 
-    if (adminResult.rows.length === 0) {
-      console.error('Superadmin user not found. Please run seed:admin first.');
-      process.exit(1);
-    }
-
-    const ownerId = adminResult.rows[0].id;
-
-    // Cek apakah outlet sudah ada
-    const existingOutlet = await pool.query(
-      "SELECT id FROM outlets WHERE name = 'Fiberbone Pusat'"
-    );
-
-    if (existingOutlet.rows.length > 0) {
-      console.log('Master outlet already exists.');
-      process.exit(0);
-    }
-
-    const insertQuery = `
-      INSERT INTO outlets (name, address, phone, description, receipt_footer, owner_id, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, name;
-    `;
-
-    const values = [
-      'Fiberbone Pusat',
-      'Jl. Sudirman No. 1, Jakarta Pusat, DKI Jakarta 10110',
-      '021-55500001',
-      'Outlet pusat jaringan internet Fiberbone.',
-      'Terima kasih telah menggunakan layanan Fiberbone.',
-      ownerId,
-      true,
-    ];
-
-    const result = await pool.query(insertQuery, values);
-    console.log(`Successfully created outlet: ${result.rows[0].name} (ID: ${result.rows[0].id})`);
+    logger.info('Outlet seeded successfully!');
     process.exit(0);
   } catch (error) {
-    console.error('Error seeding outlet:', error);
+    logger.error('Error seeding outlet', error);
     process.exit(1);
   }
 };

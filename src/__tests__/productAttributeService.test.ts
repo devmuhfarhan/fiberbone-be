@@ -18,7 +18,7 @@ describe('Product Attribute Service', () => {
         (categoryModel.findAllByOutlet as any).mockResolvedValue(mockCategories);
 
         const result = await productAttributeService.getCategories('outlet1');
-        expect(categoryModel.findAllByOutlet).toHaveBeenCalledWith('outlet1');
+        expect(categoryModel.findAllByOutlet).toHaveBeenCalledWith('outlet1', '');
         expect(result).toEqual(mockCategories);
       });
     });
@@ -81,7 +81,7 @@ describe('Product Attribute Service', () => {
         (unitModel.findAllByOutlet as any).mockResolvedValue(mockUnits);
 
         const result = await productAttributeService.getUnits('outlet1');
-        expect(unitModel.findAllByOutlet).toHaveBeenCalledWith('outlet1');
+        expect(unitModel.findAllByOutlet).toHaveBeenCalledWith('outlet1', '');
         expect(result).toEqual(mockUnits);
       });
     });

@@ -93,7 +93,7 @@ describe('Outlet Service - Settings', () => {
       (outletModel.findByOwnerId as jest.Mock).mockResolvedValue([{ id: '1', name: 'Outlet 1' }]);
       const result = await require('../services/outletService').getOutlets('superadmin_id', 'superadmin');
       expect(result.length).toBe(1);
-      expect(outletModel.findByOwnerId).toHaveBeenCalledWith('superadmin_id');
+      expect(outletModel.findByOwnerId).toHaveBeenCalledWith('superadmin_id', '');
     });
 
     it('should return assigned outlet for non-superadmin', async () => {

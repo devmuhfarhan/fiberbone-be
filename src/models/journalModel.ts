@@ -1,4 +1,5 @@
 import pool from '../config/db';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Journal {
   id: string;
@@ -92,7 +93,7 @@ export const createJournal = async (data: CreateJournalData, externalClient?: an
     const journalResult = await client.query(
       `INSERT INTO journals (outlet_id, journal_number, date, description, reference)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+       `,
       [data.outlet_id, data.journal_number, data.date, data.description, data.reference]
     );
     const journal = journalResult.rows[0];
@@ -103,7 +104,7 @@ export const createJournal = async (data: CreateJournalData, externalClient?: an
       const itemResult = await client.query(
         `INSERT INTO journal_items (journal_id, account_id, debit, credit, description)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
+         `,
         [journal.id, item.account_id, item.debit, item.credit, item.description]
       );
       items.push(itemResult.rows[0]);
