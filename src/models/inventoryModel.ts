@@ -91,3 +91,166 @@ export const getProductStock = async (productId: string, outletId: string, clien
   );
   return result.rows[0]?.stock || 0;
 };
+
+export interface EnrichedInventoryTransaction extends InventoryTransaction {
+  product_name: string;
+  product_image?: string;
+}
+
+export interface EnrichedInventoryBatch extends InventoryBatch {
+  product_name: string;
+  product_image?: string;
+}
+
+export interface HistoryQueryParams {
+  outletId: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedResult<T> {
+  rows: T[];
+  total: number;
+}
+
+export const getOpnameHistory = async (params: HistoryQueryParams): Promise<PaginatedResult<EnrichedInventoryTransaction>> => {
+  const { outletId, startDate, endDate, page = 1, limit = 10 } = params;
+  const offset = (page - 1) * limit;
+
+  let baseQuery = `
+    FROM inventory_transactions it
+    JOIN products p ON it.product_id = p.id
+    WHERE it.outlet_id = $1 AND it.reference_type = 'OPNAME'
+  `;
+  const queryParams: any[] = [outletId];
+
+  if (startDate) {
+    queryParams.push(startDate);
+    baseQuery += ` AND it.created_at >= $${queryParams.length}`;
+  }
+  if (endDate) {
+    queryParams.push(endDate + ' 23:59:59');
+    baseQuery += ` AND it.created_at <= $${queryParams.length}`;
+  }
+
+  const countResult = await pool.query(`SELECT COUNT(*) as count ${baseQuery}`, queryParams);
+  const total = parseInt(countResult.rows[0]?.count || '0', 10);
+
+  queryParams.push(limit, offset);
+  const dataQuery = `
+    SELECT it.*, p.name as product_name, p.image_url as product_image
+    ${baseQuery}
+    ORDER BY it.created_at DESC
+    LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}
+  `;
+  const result = await pool.query(dataQuery, queryParams);
+
+  return { rows: result.rows, total };
+};
+
+export const getMutationHistory = async (params: HistoryQueryParams): Promise<PaginatedResult<EnrichedInventoryTransaction>> => {
+  const { outletId, startDate, endDate, page = 1, limit = 10 } = params;
+  const offset = (page - 1) * limit;
+
+  let baseQuery = `
+    FROM inventory_transactions it
+    JOIN products p ON it.product_id = p.id
+    WHERE it.outlet_id = $1 AND (it.reference_type IS NULL OR it.reference_type NOT IN ('OPNAME', 'EXCHANGE_RETURN', 'EXCHANGE_OUT'))
+  `;
+  const queryParams: any[] = [outletId];
+
+  if (startDate) {
+    queryParams.push(startDate);
+    baseQuery += ` AND it.created_at >= $${queryParams.length}`;
+  }
+  if (endDate) {
+    queryParams.push(endDate + ' 23:59:59');
+    baseQuery += ` AND it.created_at <= $${queryParams.length}`;
+  }
+
+  const countResult = await pool.query(`SELECT COUNT(*) as count ${baseQuery}`, queryParams);
+  const total = parseInt(countResult.rows[0]?.count || '0', 10);
+
+  queryParams.push(limit, offset);
+  const dataQuery = `
+    SELECT it.*, p.name as product_name, p.image_url as product_image
+    ${baseQuery}
+    ORDER BY it.created_at DESC
+    LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}
+  `;
+  const result = await pool.query(dataQuery, queryParams);
+
+  return { rows: result.rows, total };
+};
+
+export const getBatchHistory = async (params: HistoryQueryParams): Promise<PaginatedResult<EnrichedInventoryBatch>> => {
+  const { outletId, startDate, endDate, page = 1, limit = 10 } = params;
+  const offset = (page - 1) * limit;
+
+  let baseQuery = `
+    FROM inventory_batches ib
+    JOIN products p ON ib.product_id = p.id
+    WHERE ib.outlet_id = $1
+  `;
+  const queryParams: any[] = [outletId];
+
+  if (startDate) {
+    queryParams.push(startDate);
+    baseQuery += ` AND ib.batch_date >= $${queryParams.length}`;
+  }
+  if (endDate) {
+    queryParams.push(endDate + ' 23:59:59');
+    baseQuery += ` AND ib.batch_date <= $${queryParams.length}`;
+  }
+
+  const countResult = await pool.query(`SELECT COUNT(*) as count ${baseQuery}`, queryParams);
+  const total = parseInt(countResult.rows[0]?.count || '0', 10);
+
+  queryParams.push(limit, offset);
+  const dataQuery = `
+    SELECT ib.*, p.name as product_name, p.image_url as product_image
+    ${baseQuery}
+    ORDER BY ib.created_at DESC
+    LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}
+  `;
+  const result = await pool.query(dataQuery, queryParams);
+
+  return { rows: result.rows, total };
+};
+
+export const getExchangeHistory = async (params: HistoryQueryParams): Promise<PaginatedResult<EnrichedInventoryTransaction>> => {
+  const { outletId, startDate, endDate, page = 1, limit = 10 } = params;
+  const offset = (page - 1) * limit;
+
+  let baseQuery = `
+    FROM inventory_transactions it
+    JOIN products p ON it.product_id = p.id
+    WHERE it.outlet_id = $1 AND it.reference_type IN ('EXCHANGE_RETURN', 'EXCHANGE_OUT')
+  `;
+  const queryParams: any[] = [outletId];
+
+  if (startDate) {
+    queryParams.push(startDate);
+    baseQuery += ` AND it.created_at >= $${queryParams.length}`;
+  }
+  if (endDate) {
+    queryParams.push(endDate + ' 23:59:59');
+    baseQuery += ` AND it.created_at <= $${queryParams.length}`;
+  }
+
+  const countResult = await pool.query(`SELECT COUNT(*) as count ${baseQuery}`, queryParams);
+  const total = parseInt(countResult.rows[0]?.count || '0', 10);
+
+  queryParams.push(limit, offset);
+  const dataQuery = `
+    SELECT it.*, p.name as product_name, p.image_url as product_image
+    ${baseQuery}
+    ORDER BY it.created_at DESC
+    LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}
+  `;
+  const result = await pool.query(dataQuery, queryParams);
+
+  return { rows: result.rows, total };
+};

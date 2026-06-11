@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as inventoryController from '../controllers/inventoryController';
+import * as inventoryHistoryController from '../controllers/inventoryHistoryController';
 import { authenticateToken } from '../middlewares/authMiddleware';
 import { authorizePermission } from '../middlewares/roleMiddleware';
 
@@ -11,6 +12,146 @@ const router = Router();
  *   name: Inventory
  *   description: API untuk manajemen stok dan opname
  */
+
+/**
+ * @swagger
+ * /api/inventory/history/opname:
+ *   get:
+ *     summary: Ambil riwayat penyesuaian stok opname secara global
+ *     tags: [Inventory]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Nomor halaman data
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Batas jumlah data per halaman
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal mulai penapisan (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal akhir penapisan (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil data riwayat opname
+ */
+router.get('/history/opname', authenticateToken, authorizePermission('stok', 'read'), inventoryHistoryController.getOpnameHistory);
+
+/**
+ * @swagger
+ * /api/inventory/history/mutations:
+ *   get:
+ *     summary: Ambil riwayat alur mutasi stok secara global
+ *     tags: [Inventory]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Nomor halaman data
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Batas jumlah data per halaman
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal mulai penapisan (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal akhir penapisan (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil data riwayat mutasi stok
+ */
+router.get('/history/mutations', authenticateToken, authorizePermission('stok', 'read'), inventoryHistoryController.getMutationHistory);
+
+/**
+ * @swagger
+ * /api/inventory/history/batches:
+ *   get:
+ *     summary: Ambil daftar batch FIFO aktif secara global
+ *     tags: [Inventory]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Nomor halaman data
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Batas jumlah data per halaman
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal mulai penapisan (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal akhir penapisan (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil data batch FIFO aktif
+ */
+router.get('/history/batches', authenticateToken, authorizePermission('stok', 'read'), inventoryHistoryController.getBatchHistory);
+
+/**
+ * @swagger
+ * /api/inventory/history/exchanges:
+ *   get:
+ *     summary: Ambil riwayat penukaran barang secara global
+ *     tags: [Inventory]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Nomor halaman data
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Batas jumlah data per halaman
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal mulai penapisan (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *         description: Tanggal akhir penapisan (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil data riwayat penukaran barang
+ */
+router.get('/history/exchanges', authenticateToken, authorizePermission('stok', 'read'), inventoryHistoryController.getExchangeHistory);
 
 /**
  * @swagger
