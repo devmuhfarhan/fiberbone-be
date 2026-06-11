@@ -92,13 +92,13 @@ export const findById = async (id: string, outletId: string): Promise<Product | 
 };
 
 export const create = async (data: CreateProductData): Promise<Product> => {
-  const result = await pool.query(
+  const id = uuidv4();
+  await pool.query(
     `INSERT INTO products
-       (outlet_id, category_id, unit_id, name, description, price, cost_price, stock, min_stock, image_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-     RETURNING id, outlet_id, category_id, unit_id, name, description,
-               price, cost_price, stock, min_stock, image_url, is_active, created_at, updated_at`,
+       (id, outlet_id, category_id, unit_id, name, description, price, cost_price, stock, min_stock, image_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
+      id,
       data.outlet_id,
       data.category_id ?? null,
       data.unit_id ?? null,
@@ -111,7 +111,7 @@ export const create = async (data: CreateProductData): Promise<Product> => {
       data.image_url ?? null,
     ]
   );
-  return (result.rows && result.rows.length > 0) ? result.rows[0] : ({ id: "mock-id" } as any);
+  return (await findById(id, data.outlet_id)) as Product;
 };
 
 export const update = async (
@@ -140,14 +140,12 @@ export const update = async (
   fields.push('updated_at = current_timestamp');
   values.push(id, outletId);
 
-  const result = await pool.query(
+  await pool.query(
     `UPDATE products SET ${fields.join(', ')}
-     WHERE id = $${idx++} AND outlet_id = $${idx}
-     RETURNING id, outlet_id, category_id, unit_id, name, description,
-               price, cost_price, stock, min_stock, image_url, is_active, created_at, updated_at`,
+     WHERE id = $${idx++} AND outlet_id = $${idx}`,
     values
   );
-  return (result.rows && result.rows.length > 0) ? result.rows[0] : null;
+  return findById(id, outletId);
 };
 
 export const remove = async (id: string, outletId: string): Promise<boolean> => {

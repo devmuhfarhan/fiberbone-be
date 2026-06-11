@@ -8,7 +8,7 @@ export const register = async (userData: any) => {
   try {
     const existingUser = await userModel.findByEmail(userData.email);
     if (existingUser) {
-      throw new Error('Email already registered');
+      throw new Error('Email sudah terdaftar');
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -32,16 +32,16 @@ export const login = async (email: string, password: string): Promise<{ accessTo
   try {
     const user = await userModel.findByEmail(email);
     if (!user) {
-      throw new Error('Invalid email or password');
+      throw new Error('Email atau password salah');
     }
 
     const isMatch = await bcrypt.compare(password, user.password as string);
     if (!isMatch) {
-      throw new Error('Invalid email or password');
+      throw new Error('Email atau password salah');
     }
 
     if (!user.is_active) {
-      throw new Error('Account is deactivated');
+      throw new Error('Akun dinonaktifkan');
     }
 
     const payload = {

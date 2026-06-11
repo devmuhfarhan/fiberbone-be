@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import logger from './utils/logger';
 import pool from './config/db';
 import redis from './config/redis';
@@ -22,6 +23,7 @@ import customerRoutes from './routes/customerRoutes';
 import voucherRoutes from './routes/voucherRoutes';
 import posRoutes from './routes/posRoutes';
 import purchaseRoutes from './routes/purchaseRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
@@ -36,6 +38,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve static files (product images, etc.)
+app.use('/storages', express.static(path.join(process.cwd(), 'public', 'storages')));
 
 // Example public route
 app.get('/', (req: Request, res: Response) => {
@@ -86,6 +91,9 @@ app.use('/api/vendors', vendorRoutes);
 
 // Register Purchase routes
 app.use('/api/purchases', purchaseRoutes);
+
+// Register Dashboard routes
+app.use('/api/dashboard', dashboardRoutes);
 
 // Register Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

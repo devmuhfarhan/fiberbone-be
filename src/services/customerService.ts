@@ -17,18 +17,18 @@ export const payReceivable = async (
 
     // 1. Get customer
     const customer = await customerModel.findByIdAndOutletId(customerId, outletId);
-    if (!customer) throw new Error('Customer not found');
+    if (!customer) throw new Error('Pelanggan tidak ditemukan');
 
     if (Number(customer.receivable_balance) < amount) {
-      throw new Error(`Amount exceeds receivable balance. Current balance is ${customer.receivable_balance}`);
+      throw new Error(`Jumlah melebihi saldo piutang. Saldo saat ini adalah ${customer.receivable_balance}`);
     }
 
     // 2. Get accounts
     const piutangAccount = await findByCodeAndOutletId('1100', outletId); // Piutang Usaha
-    if (!piutangAccount) throw new Error('Account 1100 (Piutang Usaha) not found');
+    if (!piutangAccount) throw new Error('Akun 1100 (Piutang Usaha) tidak ditemukan');
 
     const paymentAccount = await findAccountByIdAndOutletId(paymentAccountId, outletId);
-    if (!paymentAccount) throw new Error('Payment account not found');
+    if (!paymentAccount) throw new Error('Akun tidak ditemukan');
 
     // 3. Update customer balance
     const newBalance = Number(customer.receivable_balance) - amount;

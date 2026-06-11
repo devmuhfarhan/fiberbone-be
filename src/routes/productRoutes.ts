@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as ctrl from '../controllers/productController';
 import { authenticateToken } from '../middlewares/authMiddleware';
 import { authorizePermission } from '../middlewares/roleMiddleware';
+import { uploadProductImage } from '../config/upload';
 
 const router = Router();
 
@@ -111,6 +112,31 @@ router.get('/:id', authenticateToken, authorizePermission('produk', 'read'), ctr
  *         description: Input tidak valid
  */
 router.post('/', authenticateToken, authorizePermission('produk', 'create'), ctrl.createProduct);
+
+/**
+ * @swagger
+ * /api/products/upload-image:
+ *   post:
+ *     summary: Upload gambar produk
+ *     tags: [Products]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: URL gambar yang berhasil diupload
+ */
+router.post('/upload-image', authenticateToken, authorizePermission('produk', 'create'), uploadProductImage.single('image'), ctrl.uploadProductImage);
+
 
 /**
  * @swagger

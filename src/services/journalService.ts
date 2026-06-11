@@ -14,7 +14,7 @@ export const getJournals = async (outletId: string) => {
 export const getJournalById = async (id: string, outletId: string) => {
   try {
     const journal = await journalModel.findByIdAndOutletId(id, outletId);
-    if (!journal) throw new Error('Journal not found');
+    if (!journal) throw new Error('Jurnal tidak ditemukan');
     return journal;
   } catch (error) {
     logger.error('Error in journalService.getJournalById', error);
@@ -25,7 +25,7 @@ export const getJournalById = async (id: string, outletId: string) => {
 export const createJournal = async (data: journalModel.CreateJournalData, externalClient?: any) => {
   try {
     if (!data.items || data.items.length < 2) {
-      throw new Error('Journal must have at least 2 items');
+      throw new Error('Jurnal harus memiliki minimal 2 item');
     }
 
     let totalDebit = 0;
@@ -34,7 +34,7 @@ export const createJournal = async (data: journalModel.CreateJournalData, extern
     for (const item of data.items) {
       const account = await accountModel.findByIdAndOutletId(item.account_id, data.outlet_id);
       if (!account) {
-        throw new Error(`Account with ID ${item.account_id} not found in this outlet`);
+        throw new Error(`Akun dengan ID ${item.account_id} tidak ditemukan di outlet ini`);
       }
       
       const debit = Number(item.debit) || 0;

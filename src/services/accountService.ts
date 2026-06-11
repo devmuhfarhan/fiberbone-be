@@ -14,7 +14,7 @@ export const createAccount = async (data: accountModel.CreateAccountData) => {
   try {
     const existing = await accountModel.findByCodeAndOutletId(data.code, data.outlet_id);
     if (existing) {
-      throw new Error(`Account with code ${data.code} already exists in this outlet`);
+      throw new Error(`Akun dengan kode ${data.code} sudah ada di outlet ini`);
     }
     return await accountModel.createAccount(data);
   } catch (error) {
@@ -28,11 +28,11 @@ export const updateAccount = async (id: string, outletId: string, data: accountM
     if (data.code) {
       const existing = await accountModel.findByCodeAndOutletId(data.code, outletId);
       if (existing && existing.id !== id) {
-        throw new Error(`Account with code ${data.code} already exists`);
+        throw new Error(`Akun dengan kode ${data.code} sudah ada`);
       }
     }
     const updated = await accountModel.updateAccount(id, outletId, data);
-    if (!updated) throw new Error('Account not found');
+    if (!updated) throw new Error('Akun tidak ditemukan');
     return updated;
   } catch (error) {
     logger.error('Error in accountService.updateAccount', error);
@@ -44,12 +44,12 @@ export const deleteAccount = async (id: string, outletId: string) => {
   try {
     // Might fail if account is used in journal_items due to RESTRICT FK
     const deleted = await accountModel.deleteAccount(id, outletId);
-    if (!deleted) throw new Error('Account not found');
+    if (!deleted) throw new Error('Akun tidak ditemukan');
     return true;
   } catch (error: any) {
     logger.error('Error in accountService.deleteAccount', error);
     if (error.code === '23503') { // Foreign key violation
-      throw new Error('Account cannot be deleted because it is used in one or more journal entries');
+      throw new Error('Akun tidak dapat dihapus karena digunakan dalam satu atau lebih entri jurnal');
     }
     throw error;
   }

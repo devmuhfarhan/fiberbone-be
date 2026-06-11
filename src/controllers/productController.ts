@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import * as productService from '../services/productService';
 import { formatSuccess, formatError } from '../utils/responseFormatter';
@@ -102,5 +104,25 @@ export const deleteProduct = async (req: AuthRequest, res: Response): Promise<vo
     const message = error instanceof Error ? error.message : 'Server error';
     logger.error('productController.deleteProduct', error);
     res.status(message === 'Product not found' ? 404 : 500).json(formatError(message));
+  }
+};
+
+// POST /api/products/upload-image
+export const uploadProductImage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json(formatError('Tidak ada file yang diunggah'));
+      return;
+    }
+
+    const imageUrl = `/storages/products/${req.file.filename}`;
+    res.status(201).json(formatSuccess({ image_url: imageUrl }));
+  } catch (error: unknown) {
+    logger.error('productController.uploadProductImage', error);
+    // Hapus file jika terjadi error
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json(formatError(error instanceof Error ? error.message : 'Upload gagal'));
   }
 };
