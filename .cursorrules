@@ -5,12 +5,12 @@ Aturan ini merupakan pedoman dasar (AI Rules) dalam melakukan pengembangan, refa
 ## 1. Arsitektur & Struktur Folder (M-S-C-R Pattern)
 Proyek ini mengadopsi pola **Model - Service - Controller - Route**. Setiap fitur baru wajib mengikuti pemisahan tanggung jawab (Separation of Concerns) berikut:
 
-- **`src/models/`**: Bertanggung jawab **hanya** untuk eksekusi kueri langsung ke PostgreSQL (`pg.Pool`). Tidak menggunakan ORM. Semua query mentah (SQL) harus menggunakan *parameterized queries* (contoh: `$1, $2`) untuk menghindari SQL Injection.
+- **`src/models/`**: Bertanggung jawab **hanya** untuk eksekusi kueri langsung ke MySQL (`mysql2/promise`). Tidak menggunakan ORM. Semua query mentah (SQL) harus menggunakan *parameterized queries* dengan tanda tanya (`?`) sebagai placeholder untuk menghindari SQL Injection.
 - **`src/services/`**: Tempat menulis **Business Logic**. Panggil `models` di sini. Jika terjadi error logika bisnis, lemparkan error (`throw new Error()`) agar dapat ditangkap oleh Controller. Jangan me-return HTTP Response dari Service.
 - **`src/controllers/`**: Menangani **Request/Response HTTP**. Controller wajib:
   - Membaca parameter/body.
-  - Memanggil fungsi dari `services`.
   - Mengembalikan output JSON menggunakan helper standar `formatSuccess` atau `formatError` dari `src/utils/responseFormatter.ts`.
+  - Untuk endpoint yang mendukung **Paginasi**, wajib mengekstrak `page` dan `limit` dari query parameter (dengan default `page=1`, `limit=10`), mengembalikan metadata `{ page, limit, total, totalPage }` bersama data rows melalui `formatSuccess(rows, { page, limit, total, totalPage })`.
 - **`src/routes/`**: Menghubungkan endpoint HTTP ke `controllers`. Lindungi endpoint menggunakan middleware `authenticateToken` dan `authorizePermission` dari `src/middlewares/`.
 
 ## 2. Keamanan & Autentikasi (JWT + Cookies)
@@ -54,17 +54,21 @@ Modul yang sudah ada:
 | `users` | Manajemen Pengguna | superadmin |
 | `pos` | Point of Sale | superadmin, cashier |
 | `pengeluaran-pemasukan` | Pengeluaran & Pemasukan | superadmin, finance |
-| `pelanggan` | Pelanggan | superadmin |
+| `pelanggan` | Pelanggan | superadmin, cashier |
 | `produk` | Produk | superadmin, operational |
 | `atribut-produk` | Atribut Produk | superadmin, operational |
 | `stock-opname` | Stock Opname | superadmin, operational |
+| `akuntansi` | Keuangan & Akuntansi | superadmin, finance |
+| `pemasok` | Data Pemasok / Vendor | superadmin, finance, operational |
+| `stok` | Manajemen Stok & Opname | superadmin, operational |
+| `pembelian` | Pembelian & PO | superadmin, finance, operational |
 
 ### Aksi yang Tersedia (enum `permission_action`)
 `read` | `create` | `edit` | `delete` | `export` | `approve` | `pay` | `settings`
 
 ### Aturan Wajib RBAC
-1. **Setiap fitur/route baru** → tambahkan slug ke tabel `modules` via migration.
-2. **Seed default permissions** di migration terpisah untuk setiap modul baru.
+1. **Setiap fitur/route baru** → tambahkan slug ke tabel `modules` via seeder/migration.
+2. **Seed default permissions** di migration/seeder terpisah untuk setiap modul baru.
 3. **Jangan hardcode role** di middleware. Selalu gunakan `authorizePermission(slug, action)`.
 4. **Invalidasi cache Redis** setelah update permission via `permissionService.invalidateRoleCache(role)`.
 
@@ -80,7 +84,7 @@ Modul yang sudah ada:
 - Kerangka pengujian standar adalah **Jest** bersama **Supertest**.
 - Semua file pengujian harus disimpan di dalam folder `src/__tests__/` dengan akhiran `.test.ts`.
 - **Aturan Wajib Test**: Gunakan pendekatan **Mocking** (`jest.mock()`) terhadap:
-  - `services` dan `models` → isolasi dari PostgreSQL
+  - `services` dan `models` → isolasi dari MySQL
   - `../models/outletUserModel` → mock `findOutletByUser` agar `authenticateToken` tidak query DB
   - `../models/rolePermissionModel` → mock `checkPermission` agar `authorizePermission` tidak query DB
   - `../config/redis` → mock dengan `__esModule: true` dan method `get`, `set`, `del`
@@ -91,7 +95,7 @@ Modul yang sudah ada:
 - Dokumentasi dilakukan terpusat menggunakan antarmuka **Swagger**.
 - Tuliskan dokumentasi menggunakan **JSDoc annotations (`/** @swagger ... */`)** secara inklusif di dalam file `src/routes/` (tepat di atas definisi `router.get`, `router.post`, dsb).
 - Pastikan mencakup properti: `tags`, `summary`, `security` (jika memakai cookie), `requestBody` (bila POST/PUT), dan struktur `responses` standar.
-- Jangan membuat file `.json` atau `.yaml` terpisah, cukup integrasikan *OpenAPI Specification* via JSDoc.
+- Jangan membuat file `.json` or `.yaml` terpisah, cukup integrasikan *OpenAPI Specification* via JSDoc.
 
 ## 8. Konvensi Kode & Lingkungan (TypeScript)
 - Semua kode wajib menggunakan **TypeScript** (Strict mode diaktifkan).
@@ -100,20 +104,8 @@ Modul yang sudah ada:
 - *Dependencies* untuk environment disentralisasi di dalam satu file `.env`. Gunakan `dotenv` dan panggil nilai melalui `process.env.NAMA_VARIABEL`.
 - `req.params.id` harus selalu di-cast ke `string`: `req.params.id as string`.
 
-## 9. Konvensi Migration Database
-- Migration menggunakan **node-pg-migrate** dengan format file: `{timestamp}_{nama-deskriptif}.js`.
-- Urutan migration **harus benar** karena ada FK dependency antar tabel.
-- Urutan yang sudah ada:
-  1. `create-users`
-  2. `create-outlets`
-  3. `create-outlet-users`
-  4. `create-modules` + enum `permission_action`
-  5. `create-role-permissions`
-  6. `seed-modules`
-  7. `seed-role-permissions`
-  8. `create-product-categories`
-  9. `create-product-units`
-  10. `create-products`
-  11. `seed-missing-modules` (tambah modul `users`)
-- **Setiap tabel data baru** wajib punya kolom `outlet_id UUID NOT NULL REFERENCES outlets(id) ON DELETE CASCADE`.
-- Setiap modul baru wajib di-seed ke `modules` + `role_permissions` dalam migration tersendiri.
+## 9. Konvensi Database (MySQL)
+- Database saat ini menggunakan **MySQL**.
+- Seluruh tabel data baru wajib memiliki kolom `outlet_id` dengan referensi FK ke tabel `outlets`.
+- Kueri MySQL wajib menggunakan sintaks `?` sebagai placeholder argumen untuk keamanan kueri dinamis.
+
